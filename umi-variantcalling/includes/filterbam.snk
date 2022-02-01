@@ -30,7 +30,7 @@ rule samtools_view:
     params:
         "-bhL filterbam/{sample}.bed" # optional params string
     wrapper:
-        "0.80.2/bio/samtools/view"
+        "v1.0.0/bio/samtools/view"
 
 
 rule samtools_index:
@@ -41,7 +41,7 @@ rule samtools_index:
     params:
         "" # optional params string
     wrapper:
-        "0.80.2/bio/samtools/index"
+        "v1.0.0/bio/samtools/index"
     
 
 rule mpilup:
@@ -56,7 +56,7 @@ rule mpilup:
     params:
         extra="".join([" -q ", str(config['mpileup']['MAPQ']), " -Q ", str(config['mpileup']['Q'])]),  # optional
     wrapper:
-        "0.80.2/bio/samtools/mpileup"
+        "v1.0.0/bio/samtools/mpileup"
 
 
 rule filter_pileup:

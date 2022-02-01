@@ -10,3 +10,4 @@ dependencies:
   - mawk
   - drmaa
   - pysam
+  - samtools==1.11

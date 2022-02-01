@@ -11,9 +11,7 @@ import pysam
 
 # with open("configs/config_robert.yaml") as config_file:
 #     config = yaml.load(config_file)
-# configfile: "configs/config_1122.yaml"
-configfile: "configs/config_1104.yaml"
-# configfile: "configs/config_1156.yaml"
+configfile: "configs/config1162.yaml"
 
 workdir: config['workdir']
 

@@ -22,7 +22,7 @@ rule samtools_faidx:
     params:
         "" # optional params string
     wrapper:
-        "0.80.2/bio/samtools/faidx"
+        "v1.0.0/bio/samtools/faidx"
 
 rule bwa_index:
     input:
@@ -35,7 +35,7 @@ rule bwa_index:
         prefix="refs/genome.fasta",
         algorithm="bwtsw"
     wrapper:
-        "0.80.2/bio/bwa/index"
+        "v1.0.0/bio/bwa/index"
 
 rule create_dict:
     input:
@@ -47,7 +47,7 @@ rule create_dict:
     params:
         extra=""  # optional: extra arguments for picard.
     wrapper:
-        "0.80.2/bio/picard/createsequencedictionary"
+        "v1.0.0/bio/picard/createsequencedictionary"
 
 rule samtools_index:
     input:
@@ -55,7 +55,7 @@ rule samtools_index:
     output:
         "mapped/{prefix}.bam.bai"
     wrapper:
-        "0.78.0/bio/samtools/index"
+        "v1.0.0/bio/samtools/index"
 
 rule bed_to_interval_list:
     input:
@@ -69,4 +69,4 @@ rule bed_to_interval_list:
         # optional parameters
         "SORT=true" # sort output interval list before writing
     wrapper:
-        "0.80.2/bio/picard/bedtointervallist"
+        "v1.0.0/bio/picard/bedtointervallist"

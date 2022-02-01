@@ -4,5 +4,5 @@ channels:
 dependencies:
   - ebfilter
   - vcfpy
-  - samtools
+  - samtools==1.11
   - bcftools
