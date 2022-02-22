@@ -70,6 +70,8 @@ rule multiqc_alignments:
         expand("qc/{ctype}/{sample}.{ftype}.txt", sample=SAMPLES, ctype=["samtools-stats","hs_metrics"], ftype=["consensusreads","woconsensus","filtered","realigned"])
     output:
         report("qc/multiqc_alignments.html", caption="../report/multiqc_alignments.rst", category="Quality control")
+    params:
+        " --interactive"
     log:
         "logs/multiqc.log"
     wrapper:
@@ -81,6 +83,8 @@ rule multiqc_reads:
         expand("qc/fastqc/{sample}.{ftype}_fastqc.zip", sample=SAMPLES, ftype=["R1","R2"])
     output:
         report("qc/multiqc_reads.html", caption="../report/multiqc_reads.rst", category="Quality control")
+    params:
+        " --interactive"
     log:
         "logs/multiqc.log"
     wrapper:

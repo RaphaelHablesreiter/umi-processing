@@ -28,7 +28,7 @@ rule samtools_view:
     output:
         "filterbam/{sample}.bam"
     params:
-        "-bhL filterbam/{sample}.bed" # optional params string
+        extra="-bhL filterbam/{sample}.bed" # optional params string
     wrapper:
         "v1.0.0/bio/samtools/view"
 

@@ -68,11 +68,12 @@ rule primer3:
     conda:
         "../env/primer3-env.yml"
     threads: 1
+    log:
+        "logs/tools/{sample}_primer3.log"
     params:
-        genome_split = f"/fast/groups/ag_damm/work/umi-data-processing/split"
+        genome_split = f"/fast/work/users/altwassr_c/refs/split_hg38_u2af1_fix/"
     script:
         "../scripts/primer3.py"
-
 
 rule detect_HDR:
     input:

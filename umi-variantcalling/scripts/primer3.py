@@ -16,6 +16,22 @@ i = snakemake.input[0]
 o = snakemake.output[0]
 threads = snakemake.threads
 genome_split = snakemake.params.genome_split
+
+
+# i = "table/AML-143.edit.csv"
+# o = "table/AML-143.edit.primer.csv"
+# 
+# threads = 4
+# genome_split = "/data/gpfs-1/users/altwassr_c/work/refs/split_hg38_u2af1_fix/"
+# 
+# 
+# PCR_config = {
+#     'seq_len': 500,
+#     'mut_pad': 5,
+#     'prod_size_min': 120,
+#     'prod_size_max': 220
+# }
+
 # ##### Primer3 ########################################################
 
 PCR_config = {
@@ -52,7 +68,7 @@ def file2str(file):
     '''
     returns a string from a text file
     '''
-
+    
     with open(file, 'r') as file:
         return file.read().upper().replace('\n', '')
 
@@ -63,7 +79,7 @@ def get_chrom(chrom, chroms_folder='chroms'):
     the header sequences
     a folder containing the split chromosomes has to be provided
     '''
-
+    
     if 'CHR' in str(chrom).upper():
         chrom = chrom.upper().replace('CHR', '')
     chrom_file = f"{chroms_folder}/chr{chrom}.fa"
@@ -97,7 +113,9 @@ def mut2insert(mut={}, seq={}, return_none=False):
     and returns the seq with the mutation inserted into the sequence
     if mutation location is out of bounds of sequence, only the sequence is returned without editing
     '''
-
+    # print(mut)
+    # print(seq)
+    
     if mut['Chr'] != seq['Chr']:
         return None if return_none else seq['seq']
     if (mut['Start'] < seq['Start']) or (mut['End'] > seq['End']):
@@ -106,14 +124,14 @@ def mut2insert(mut={}, seq={}, return_none=False):
     # case SNP
     start = mut['Start'] - seq['Start']
     end = mut['End'] - seq['Start']
-
+    
     if mut['Ref'] == "-":
         upstream = seq['seq'][:start]
         downstream = seq['seq'][end:]
         mutation = f"<<+{mut['Alt']}>>"
     else:
         upstream = seq['seq'][:start]
-        downstream = seq['seq'][end + 1:]
+        downstream = seq['seq'][int(end) + 1:]
         if mut['Alt'] == "-":
             mutation = f">∆{mut['Ref']}<"
         else:
@@ -138,15 +156,15 @@ def edit_seq(row):
         }
         return mut_dict
     mut_dict = mut2dict(row)
-
-
+    
+    
     insert_dict = {
         'Chr': row['Chr'],
         'Start': row['InsertStart'],
         'End': row['InsertEnd'],
         'seq': row['InsertSeq']
     }
-
+    
     edited_seq = mut2insert(mut=mut_dict, seq=insert_dict, return_none=True)
     return edited_seq
 
@@ -157,7 +175,7 @@ def get_primer_df(chrom, config, row):
     return value is [fwd_seq, fwd_tmp, rev_seq, rev_tmp, prod_size]
     active chromosome sequence is global variable chrom
     '''
-
+    
     # load sequence
     pos = row['Start']
     half_seq = int(config['seq_len'] / 2)
@@ -166,7 +184,7 @@ def get_primer_df(chrom, config, row):
     seq = chrom['sequence'][seq_start:seq_end]
     pad = int(config['mut_pad'] / 2)
     half_size = int(config['prod_size_min'] / 2)
-
+    
     # calculate the target_range as offSet from center (half)
     offSet = half_size - 20 - pad
     target_start = half_seq - offSet
@@ -177,7 +195,7 @@ def get_primer_df(chrom, config, row):
         'SEQUENCE_TARGET': target
     }
     primers = primer3.bindings.designPrimers(setting, config)
-
+    
     # return '--' if nothing was found
     if primers['PRIMER_PAIR_NUM_RETURNED'] == 0:
         row['fwd_seq'] = row['fwd_tmp'] = row['rev_seq'] = row['rev_tmp'] = row['prod_size'] = '--'
@@ -216,8 +234,6 @@ def get_primer_df(chrom, config, row):
     row['offsetL'] = row['Start'] - insert_start
     row['offsetR'] = insert_end - row['End']
     
-    
-    
     row['fwd-Primer'] = primers['PRIMER_LEFT_0_SEQUENCE']
     row['rev_Primer'] = primers['PRIMER_RIGHT_0_SEQUENCE']
     row['AmpliconSize'] = sum(primers['PRIMER_RIGHT_0']) - primers['PRIMER_LEFT_0'][0]
@@ -227,11 +243,11 @@ def get_primer_df(chrom, config, row):
 
 
 def run_primer3(mut_df, chroms_folder='', pcr_config=PCR_config, primer3_config=Primer3_config, primer_list=''):
-
+    
     # apply pcr size to primer3_config
     primer3_config['PRIMER_PRODUCT_SIZE_RANGE'] = [pcr_config['prod_size_min'], pcr_config['prod_size_max']]
     primer3_config.update(pcr_config)
-
+    
     mut_df.loc[:, 'Chr'] = mut_df['Chr'].astype('str')
     mut_df = mut_df.loc[:, ['Chr', 'Start', 'End', 'Ref', 'Alt', 'Gene']]
     org_cols = list(mut_df.columns)
@@ -261,15 +277,14 @@ def run_primer3(mut_df, chroms_folder='', pcr_config=PCR_config, primer3_config=
     ]
     for col in ['AmpliconSize', 'InsertSize', 'offsetL', 'offsetR']:
         primer_df[col] = primer_df[col].fillna(0).astype(int)
-
+    
     primer_df = primer_df[org_cols + new_cols]
     return primer_df
-    
 
-
+print("### loaded functions\n")
 filter1_df = pd.read_csv(i, sep='\t')
 
-
+print("### loaded file\n")
 primer_df = run_primer3(
     filter1_df,
     chroms_folder=genome_split,
@@ -277,5 +292,6 @@ primer_df = run_primer3(
     primer3_config=Primer3_config
 )
 
+print("### finished calculations\n")
 primer_df.to_csv(o, sep='\t', index=False)
 print(f"Writing primer list to {o}.")

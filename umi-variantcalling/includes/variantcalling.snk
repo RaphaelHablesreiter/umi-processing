@@ -64,8 +64,10 @@ rule norm_vcf:
         index = "vardict/{sample}.vcf.gz.csi"
     output:
         temp("vardict/{sample}.norm.vcf.gz")
+    log:
+       "logs/tools/{sample}_norm_vcf.log",
     params:
-        ''.join(['-f ', config['refgenome']])  # optional parameters for bcftools norm (except -o)
+        extra=''.join(['-f ', config['refgenome']])  # optional parameters for bcftools norm (except -o)
     wrapper:
         "v1.0.0/bio/bcftools/norm"
 
@@ -79,7 +81,7 @@ rule vcf_to_table:
         wd = config['workdir'],
         sd = config['snakedir'],
         rs = f"scripts/Vcf2Table.R",
-    log:                                                                                                                                                         
+    log:
        "logs/tools/{sample}_vcf_to_table.log",
     conda:
         "../env/vardict-pipeline.yml",
