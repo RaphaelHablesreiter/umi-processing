@@ -1,7 +1,7 @@
 inputdir: "/fast/users/altwassr_c/scratch/P1162/demux/mapped"
 workdir: "/fast/users/altwassr_c/scratch/P1162/variantcalling/"
 snakedir: "/fast/users/altwassr_c/work/umi-data-processing/umi-variantcalling/"
-bedfile: "/fast/users/altwassr_c/work/umi-data-processing/DKMS_v5_CHIPpanel_hg38.bed"
+bedfile: "/fast/users/altwassr_c/work/refs/merged_probe_file_combined_Charite_AG_DKMS_Panel_V5p1update_TE-93192476_hg38.bed"
 refgenome: "/fast/users/altwassr_c/work/refs/GRCh38.u2af1_fix.v1.2020_04_01.fa"
 
 #### ABSOLUTE PATHS ############

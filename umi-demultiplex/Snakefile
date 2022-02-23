@@ -49,5 +49,5 @@ include: "rules/tools.smk"
 rule all:
     input:
         expand("unmapped/{sample}.unmapped.bam", sample=SAMPLES),
-        # "qc/multiqc_reads.html",
-        # "qc/multiqc_alignments.html"
+        "qc/multiqc_reads.html",
+        "qc/multiqc_alignments.html"
