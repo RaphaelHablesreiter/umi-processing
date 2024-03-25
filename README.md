@@ -1,9 +1,6 @@
 # umi-processing
 
 - build by Raphael Hablesreiter
-- Similar pipeline, according to Raphael:
-
-> Die Pipeline von Martin beruht auf einer Pipeline einer Kollegin. Und die von mir ist eine abgespeckte und vereinfachte Version. Und die von mir ist eine abgespeckte und vereinfachte Version. somVarWes benutzt varscan für variantcalling und meine vardict.
 
 - demultiplexing of UMI explained [here](./../docs/raphael/demultiplexing-data-containing-unique-molecular-indexes-(umis).pdf)
 
