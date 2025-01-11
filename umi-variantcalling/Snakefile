@@ -1,0 +1,68 @@
+# ==============================================================================
+# Snakemake workflow: Preprocessing of Illumina sequencing data 
+#                     containing unique molecular identifiers (UMIs)
+#
+# Author: Robert Altwasser (robert.altwasser@charite.de)
+#         Raphael Hablesreiter (raphael.hablesreiter@charite.de)
+#
+# Description:
+# Snakemake implementation of IDT analysis guidlines "Demultiplexing Illumina 
+# sequencing data containing unique molecular identifiers (UMIs)".
+# ==============================================================================
+
+import os
+import re
+import yaml
+import argparse
+import math
+import importlib.util
+# import pysam
+
+# ############ SETUP ##############################
+
+configfile: "../config/config1413_belove.yaml"
+
+workdir: config["general"]["work_dir"] + "variantcalling/"
+
+samples = os.listdir(config["general"]["work_dir"] + "demux/mapped")
+samples = list(filter(lambda x:'.realigned.bam' in x, samples))
+samples = list(filter(lambda x:'.bai' not in x, samples)) ### ROBERT: otherwise index files stay in Samples
+samples = [s.replace('.realigned.bam', '') for s in samples]
+
+list(filter(lambda x:'.bai' in x, samples))
+
+file_ending = ".realigned.bam"
+input_bam = {}
+for sample in samples:
+    input_bam[sample] = ''.join([config["general"]["work_dir"], "demux/mapped/", sample, file_ending])
+
+
+# ############ INCLUDES ##############################
+# include helper functions
+include: "rules/io.snk"
+include: "rules/utils.snk"
+include: "rules/resources.smk"
+
+include: "rules/variantcalling.snk"
+include: "rules/annotate.snk"
+include: "rules/filterbam.snk"
+
+
+# specified wildcards have to match the regex
+wildcard_constraints:
+    # eg sample cannot contain _ or / to prevent ambiguous wildcards
+    sample = "[^/.]+",
+    read = "[^_/.]+",
+    read_or_index = "[^_/.]+",
+    filter = "filter[0-9]+"
+    # folder = "^((?!filter).)*$"
+
+
+# ############## MASTER RULE ##############################################
+
+rule all:
+    input:
+        expand("vardict/{sample}.vcf", sample = samples),
+        "filter/variantcalls.csv"
+
+###########################################################################

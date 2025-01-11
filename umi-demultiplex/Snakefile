@@ -1,0 +1,44 @@
+# ==============================================================================
+# Snakemake workflow: Demultiplexing of Illumina sequencing data 
+#                     containing unique molecular identifiers (UMIs)
+#
+# Author: Robert Altwasser (robert.altwasser@charite.de)
+#         Raphael Hablesreiter (raphael.hablesreiter@charite.de)
+#
+# Description:
+# Snakemake implementation of IDT analysis guidlines "Demultiplexing Illumina 
+# sequencing data containing unique molecular identifiers (UMIs)".
+# ==============================================================================
+
+# ==============================================================================
+# Initialization of workflow
+# ==============================================================================
+
+import pandas as pd
+import numpy as np
+import glob
+from snakemake.utils import validate
+from snakemake.utils import min_version
+
+min_version("5.7.1")
+
+configfile: "../config/config3228.yaml"
+# validate(config, schema="schemas/config.schema.yaml")
+
+workdir: config["general"]["work_dir"] + "demux/"
+
+### Dict mapping samples to lanes
+df = pd.read_csv(config["general"]["SampleSheet"], sep = ',', skiprows=13)
+SAMPLES = list(df.iloc[:,1])
+
+# print(SAMPLES)
+rule all:
+    input:
+        expand("unmapped/{sample}.unmapped.bam", sample=SAMPLES),
+
+# ==============================================================================
+# Include rules
+# ==============================================================================
+
+include: "rules/demux.smk"
+

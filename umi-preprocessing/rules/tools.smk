@@ -6,6 +6,9 @@ rule get_refs:
         genome="refs/genome.fasta",
         known_indels="refs/known_indels.vcf.gz",
         index="refs/known_indels.vcf.gz.tbi"
+    resources:
+        mem_mb="2G",
+        time="01:00:00"
     shell:
         r"""
         mkdir -p refs
@@ -21,19 +24,59 @@ rule samtools_faidx:
         "refs/genome.fasta.fai"
     params:
         "" # optional params string
+    resources:
+        mem_mb="2G",
+        time="01:00:00"
     wrapper:
         "v1.0.0/bio/samtools/faidx"
+
+rule query_bam_sort:
+    input:
+        "{file}.bam"
+    output:
+        "{file}_qsorted.bam"
+    resources:
+        mem_mb="20G",
+        time="00:30:00"
+    log:
+        "logs/picard/query_bam_sort/{file}.log"
+    shell:
+        r"""
+        picard SortSam I={input} \
+        SORT_ORDER=queryname \
+        o={output} &> {log}
+        """
+
+rule coordinate_bam_sort:
+    input:
+        "{file}.bam"
+    output:
+        "{file}_csorted.bam"
+    resources:
+        mem_mb="20G",
+        time="00:30:00"
+    log:
+        "logs/picard/coordinate_bam_sort/{file}.log"
+    shell:
+        r"""
+        picard SortSam I={input} \
+        SORT_ORDER=coordinate \
+        o={output} &> {log}
+        """
 
 rule bwa_index:
     input:
         "refs/genome.fasta"
     output:
-        multiext("refs/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")
+        idx=multiext("refs/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")
     log:
         "logs/bwa_index/genome.log"
     params:
         prefix="refs/genome.fasta",
         algorithm="bwtsw"
+    resources:
+        mem_mb="10G",
+        time="02:00:00"
     wrapper:
         "v1.0.0/bio/bwa/index"
 
@@ -51,22 +94,28 @@ rule create_dict:
 
 rule samtools_index:
     input:
-        "mapped/{prefix}.bam"
+        "mapped/{file}.bam"
     output:
-        "mapped/{prefix}.bam.bai"
+        "mapped/{file}.bam.bai"
+    resources:
+        mem_mb="2G",
+        time="01:00:00"
     wrapper:
         "v1.0.0/bio/samtools/index"
 
 rule bed_to_interval_list:
     input:
-        bed=config["general"]["region_file"],
+        bed=config["reference"]["region_file"],
         dict="refs/genome.dict"
     output:
         "refs/region.intervals"
     log:
-        "logs/picard/bedtointervallist/a.log"
+        "logs/picard/bedtointervallist.log"
     params:
         # optional parameters
-        "SORT=true" # sort output interval list before writing
+        extra="--SORT true", # sort output interval list before writing
+    resources:
+        mem_mb=1024,
+        time="01:00:00"
     wrapper:
         "v1.0.0/bio/picard/bedtointervallist"

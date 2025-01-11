@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+print("start MergCalls")
 args = commandArgs(trailingOnly=TRUE)
 
 files <- list.files(args[1], pattern = ".edit.csv")
@@ -8,7 +9,7 @@ out <- ""
 for (i in 1:length(files)) 
 {
     sample <- strsplit(files[i], split = ".", fixed = TRUE)[[1]][1]  
-    #print(sample)
+    print(sample)
     file <- read.table(paste0(args[1], "/", files[i]),
                        header = TRUE,
                        quote = "\"", 
@@ -25,4 +26,6 @@ for (i in 1:length(files))
     }
 } 
 
+print("write Table \n")
 write.table(out, file = args[2], quote = TRUE, sep = "\t", row.names = FALSE)
+print("MergCalls done")

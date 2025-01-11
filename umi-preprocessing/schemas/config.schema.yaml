@@ -9,9 +9,9 @@ properties:
       type: string
     region_file:
       type: string
-    barcode_file:
+    barcode_file_prefix:
       type: string
-    library_file:
+    library_file_prefix:
       type: string
     demux:
       type: boolean
@@ -38,13 +38,10 @@ properties:
       type: string
     runbarcode:
       type: string
-    lane:
-      type: string
     required:
       - basecall_dir
       - readstructure
       - runbarcode
-      - lane
 
   picard:
     memoryusage:

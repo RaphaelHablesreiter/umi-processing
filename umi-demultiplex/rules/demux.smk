@@ -1,47 +1,61 @@
-rule extract_barcodes:
+rule basecalls_to_fastq:
+     input:
+         basecalls=config["illumina"]["basecall_dir"],
+         SampleSheet=config["general"]["SampleSheet"]
+     output:
+          flag = touch("logs/demux/done.txt")
+     params:
+         rstructure=config["illumina"]["readstructure"],
+     threads: 30
+     resources:
+         mem="70G",
+         mem_mb="70G",
+         time="24:00:00"
+     shell:
+         """
+         bcl2fastq \
+                    --input-dir {input.basecalls} \
+                    --runfolder-dir {input.basecalls}/../../../ \
+                    --output-dir reads \
+                    --sample-sheet {input.SampleSheet} \
+                    --barcode-mismatches 1 \
+                    --loading-threads 6 \
+                    --writing-threads 6 \
+                    --processing-threads 30 \
+                    --ignore-missing-bcl \
+                    --ignore-missing-filter \
+                    --mask-short-adapter-reads 0 \
+                    --create-fastq-for-index-reads \
+                    --use-bases-mask {params.rstructure}
+         """
+
+def get_fq(wildcards):
+    # code that returns a list of fastq files  based on *wildcards.sample* e.g.
+    return sorted(glob.glob("reads/" + wildcards.sample + '_S*.fastq.gz'))
+
+        #fastq=get_fq,
+rule fastq_to_bam:
     input:
-        basecalls=config["illumina"]["basecall_dir"],
-        bfile=config["general"]["barcode_file"]
+        flag = "logs/demux/done.txt",
+        fastq=get_fq
     output:
-        "metrices/barcode_metrices.txt"
+        "unmapped/{sample}.unmapped.bam"
     params:
-        lane=config["illumina"]["lane"],
-        rstructure=config["illumina"]["readstructure"]
+         sampleName = "{sample}",
+         readstructure = config["fgbio"]["readstructure"]
     log:
-        "logs/picard/ExtractIlluminaBarcodes.log"
+        "logs/fgbio/{sample}.log"
+    resources:
+        mem="70G",
+        mem_mb="70G",
+        time="5:00:00"
     shell:
-        r"""
-        mkdir -p metrices
-        picard ExtractIlluminaBarcodes B={input.basecalls} L={params.lane} M={output} BARCODE_FILE={input.bfile} RS={params.rstructure} &> {log}
         """
-
-
-rule basecalls_to_sam:
-    input:
-        basecalls=config["illumina"]["basecall_dir"],
-        metrices="metrices/barcode_metrices.txt",
-        lparams=config["general"]["library_file"]
-    output:
-        expand("unmapped/{sample}.unmapped.bam", sample=SAMPLES)
-    params:
-        lane=config["illumina"]["lane"],
-        rstructure=config["illumina"]["readstructure"],
-        runbarcode=config["illumina"]["runbarcode"],
-        musage=config["picard"]["memoryusage"],
-        mrecords= "500000"
-    log:
-        "logs/picard/IlluminaBasecallsToSam.log"
-    shell:
-        r"""
-        mkdir -p tmp
-        picard {params.musage} IlluminaBasecallsToSam \
-        B={input.basecalls} \
-        L={params.lane} \
-        RS={params.rstructure} \
-        RUN_BARCODE={params.runbarcode} \
-        LIBRARY_PARAMS={input.lparams} \
-        SEQUENCING_CENTER=CHARITE \
-        TMP_DIR=tmp/ \
-        MAX_RECORDS_IN_RAM={params.mrecords} MAX_READS_IN_RAM_PER_TILE={params.mrecords} &> {log}
-        rm -r tmp 
+        fgbio FastqToBam \
+        --input {input.fastq} \
+        --read-structures {params.readstructure} \
+        --output {output} \
+        --sort true \
+        --sample {params.sampleName} \
+        --library=illumina &> {log}
         """
