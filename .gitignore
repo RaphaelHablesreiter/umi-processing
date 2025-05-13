@@ -1,3 +1,4 @@
 *.bed
 refs/
 .snakemake/
+*.code-workspace

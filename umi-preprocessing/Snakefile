@@ -2,11 +2,11 @@
 # Snakemake workflow: Preprocessing of Illumina sequencing data 
 #                     containing unique molecular identifiers (UMIs)
 #
-# Author: Robert Altwasser (robert.altwasser@charite.de)
-#         Raphael Hablesreiter (raphael.hablesreiter@charite.de)
+# Author: Raphael Hablesreiter (raphael.hablesreiter@charite.de)
+# modified by Hanna Edler, 04-09-2024
 #
 # Description:
-# Snakemake implementation of IDT analysis guidlines "Demultiplexing Illumina 
+# Snakemake implementation of IDT analysis guidelines "Demultiplexing Illumina 
 # sequencing data containing unique molecular identifiers (UMIs)".
 # ==============================================================================
 
@@ -14,18 +14,58 @@
 # Initialization of workflow
 # ==============================================================================
 
+import os
 import pandas as pd
 from snakemake.utils import validate
 from snakemake.utils import min_version
 
-min_version("5.7.1")
+min_version("8.10")
 
-configfile: "../config/config1413_belove.yaml"
+configfile: "/data/cephfs-1/home/users/hablesrr_c/work/repos/umi-processing-v2.2/config/configA5031_BASE.yaml"
 validate(config, schema="schemas/config.schema.yaml")
 
-SAMPLES = os.listdir(config["general"]["work_dir"] + "/demux/unmapped/")
-SAMPLES = list(filter(lambda x:'.unmapped.bam' in x, SAMPLES))
-SAMPLES = [s.replace('.unmapped.bam', '') for s in SAMPLES]
+# List of directories to scan
+directories = ["/data/cephfs-1/scratch/groups/damm/users/hablesrr_c/A5031_unmapped"]
+
+# Initialize an empty list to store file information
+file_data = []
+
+size_threshold = 100 * 1024 * 1024  # 100 MB in bytes
+
+print(f"Skipping following samples because they are too small:")
+# Loop through each directory
+for directory in directories:
+    for root, _, files in os.walk(directory):
+        for file in files:
+            # Get the full path of the file
+            full_path = os.path.join(root, file)
+            if file.endswith(".unmapped.bam") and os.path.getsize(full_path) > size_threshold:
+                # Get the basename of the file
+                basename = os.path.basename(file)
+                basename = basename.replace(".unmapped.bam", "")
+                # Append the data to the list
+                file_data.append({"sample": basename, "full_path": full_path})
+            elif file.endswith(".unmapped.bam"):
+                print(f"{full_path}")
+            else:
+                continue
+
+# Create a DataFrame from the list
+SAMPLES = pd.DataFrame(file_data)
+
+# CLL filter
+# SAMPLES = SAMPLES[SAMPLES['sample'].str.contains(r'^CLL_')]
+SAMPLES = SAMPLES[~SAMPLES['sample'].str.contains(r'^CLL_')]
+
+
+# Display the DataFrame
+print(SAMPLES)
+
+
+# SAMPLES = os.listdir(config["general"]["work_dir"] + "/demux/unmapped/")
+# SAMPLES = list(filter(lambda x:'.unmapped.bam' in x, SAMPLES))
+# SAMPLES = [s.replace('.unmapped.bam', '') for s in SAMPLES]
+# print(SAMPLES) #can cause problems when visualizing the DAG with dot; simply comment out
 
 workdir: config["general"]["work_dir"] + "/demux/"
 
@@ -44,7 +84,9 @@ include: "rules/tools.smk"
 
 rule all:
     input:
-        expand("mapped/{sample}.realigned.bam", sample=SAMPLES),
-        expand("mapped/{sample}.realigned.bam.bai", sample=SAMPLES),
-        "qc/multiqc_reads.html",
-        "qc/multiqc_alignments.html"
+        #"logs/save/preprocess/done.txt",
+        #expand("mapped/{sample}.consensusreads.bam", sample=SAMPLES.get("sample")),
+#        expand("mapped/{sample}.realigned.bam", sample=SAMPLES.get("sample")),
+#        expand("mapped/{sample}.realigned.bam.bai", sample=SAMPLES.get("sample")),
+        "qc/multiqc.html",
+        "qc/multiqc_data.zip"

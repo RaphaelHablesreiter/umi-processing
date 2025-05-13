@@ -6,9 +6,12 @@ rule get_refs:
         genome="refs/genome.fasta",
         known_indels="refs/known_indels.vcf.gz",
         index="refs/known_indels.vcf.gz.tbi"
+    conda: "../envs/refs.yaml"
+    benchmark:
+        "benchmarks/tools/get_refs.tsv"
     resources:
-        mem_mb="2G",
-        time="01:00:00"
+        mem="2G",
+        runtime="1h"
     shell:
         r"""
         mkdir -p refs
@@ -24,20 +27,25 @@ rule samtools_faidx:
         "refs/genome.fasta.fai"
     params:
         "" # optional params string
+    benchmark:
+        "benchmarks/tools/samtools_faidx.tsv"
     resources:
-        mem_mb="2G",
-        time="01:00:00"
+        mem="2G",
+        runtime="1h"
     wrapper:
-        "v1.0.0/bio/samtools/faidx"
+        "v5.0.1/bio/samtools/faidx"
 
 rule query_bam_sort:
     input:
         "{file}.bam"
     output:
         "{file}_qsorted.bam"
+    conda: "../envs/mapping.yaml"
     resources:
-        mem_mb="20G",
-        time="00:30:00"
+        mem="20G",
+        runtime="30m"
+    benchmark:
+        "benchmarks/tools/query_bam_sort/{file}.tsv"
     log:
         "logs/picard/query_bam_sort/{file}.log"
     shell:
@@ -49,14 +57,17 @@ rule query_bam_sort:
 
 rule coordinate_bam_sort:
     input:
-        "{file}.bam"
+        "fixed-rg/{sample}.filtered.bam"
     output:
-        "{file}_csorted.bam"
+        "mapped/{sample}.filtered_csorted.bam"
+    conda: "../envs/mapping.yaml"
     resources:
-        mem_mb="20G",
-        time="00:30:00"
+        mem="20G",
+        runtime="30m"
+    benchmark:
+        "benchmarks/tools/coordinate_bam_sort/{sample}.filtered.tsv"
     log:
-        "logs/picard/coordinate_bam_sort/{file}.log"
+        "logs/picard/coordinate_bam_sort/{sample}.filtered.log"
     shell:
         r"""
         picard SortSam I={input} \
@@ -64,44 +75,73 @@ rule coordinate_bam_sort:
         o={output} &> {log}
         """
 
-rule bwa_index:
+#rule bwa_index:
+#    input:
+#        "refs/genome.fasta"
+#    output:
+#        idx=multiext("refs/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")
+#    benchmark:
+#        "benchmarks/tools/bwa_index.tsv"
+#    log:
+#        "logs/bwa_index/genome.log"
+#    params:
+#        prefix="refs/genome.fasta",
+#        algorithm="bwtsw"
+#    resources:
+#        mem="10G",
+#        runtime="2h"
+#    wrapper:
+#        "v5.0.1/bio/bwa/index"
+
+rule bwa_mem2_index:
     input:
-        "refs/genome.fasta"
+        "refs/genome.fasta",
     output:
-        idx=multiext("refs/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")
+        multiext("refs/genome.fasta", ".amb", ".ann", ".bwt.2bit.64", ".pac", ".0123"),
+#        "{genome}.0123",
+#        "{genome}.amb",
+#        "{genome}.ann",
+#        "{genome}.bwt.2bit.64",
+#        "{genome}.pac",
+    benchmark:
+        "benchmarks/tools/bwa_mem2_index.tsv"
     log:
-        "logs/bwa_index/genome.log"
-    params:
-        prefix="refs/genome.fasta",
-        algorithm="bwtsw"
+        "logs/bwa-mem2_index/genome.log",
     resources:
-        mem_mb="10G",
-        time="02:00:00"
+        mem="100G",
+        runtime="2h"
     wrapper:
-        "v1.0.0/bio/bwa/index"
+        "v5.5.0/bio/bwa-mem2/index"
 
 rule create_dict:
     input:
         "refs/genome.fasta"
     output:
         "refs/genome.dict"
+    benchmark:
+        "benchmarks/tools/create_dict.tsv"
     log:
         "logs/picard/create_dict.log"
     params:
         extra=""  # optional: extra arguments for picard.
+    resources:
+        mem_mb=8192,
+        runtime="1h"
     wrapper:
-        "v1.0.0/bio/picard/createsequencedictionary"
+        "v5.0.1/bio/picard/createsequencedictionary"
 
 rule samtools_index:
     input:
         "mapped/{file}.bam"
     output:
         "mapped/{file}.bam.bai"
+    benchmark:
+        "benchmarks/tools/samtools_index/{file}.tsv"
     resources:
-        mem_mb="2G",
-        time="01:00:00"
+        mem="2G",
+        runtime="1h"
     wrapper:
-        "v1.0.0/bio/samtools/index"
+        "v3.3.3/bio/samtools/index"
 
 rule bed_to_interval_list:
     input:
@@ -109,13 +149,37 @@ rule bed_to_interval_list:
         dict="refs/genome.dict"
     output:
         "refs/region.intervals"
+    benchmark:
+        "benchmarks/tools/bed_to_interval_list.tsv"
     log:
         "logs/picard/bedtointervallist.log"
     params:
         # optional parameters
         extra="--SORT true", # sort output interval list before writing
     resources:
-        mem_mb=1024,
-        time="01:00:00"
+        mem_mb=8192,
+        runtime="1h"
     wrapper:
-        "v1.0.0/bio/picard/bedtointervallist"
+        "v5.5.2/bio/picard/bedtointervallist"
+
+# rule save:
+#     input:
+#         bam=expand("mapped/{sample}.realigned.bam", sample=SAMPLES),
+#         index=expand("mapped/{sample}.realigned.bam.bai", sample=SAMPLES),
+#         multiqc="qc/multiqc.html"
+#     output:
+#         multiqc=config["longterm_storage"]["multiqc"],
+#         bam=directory(config["longterm_storage"]["realignedbamdir"]),
+#         #index=directory(config["longterm_storage"]["realignedbamdir"]),
+#         flag=touch("logs/save/preprocess/done.txt")
+#     benchmark:
+#         "benchmarks/save/demux.tsv"
+#     resources:
+#         runtime="12h"
+#     log:
+#         "logs/save/save_realigned.log"
+#     shell:
+#         """
+#         rsync -a {input.bam} {input.index} {output.bam}
+#         rsync -a {input.multiqc} {output.multiqc} &> {log}
+#         """
