@@ -26,57 +26,58 @@ rule annovar:
         rm {output.tmp}.hg38_multianno.txt
         """
 
-if config["general"]["control"]:
-    rule ebfilter:
-        input:
-            sample = lambda wildcards: input_bam[wildcards.sample],
-            vcf = "vardict/{sample}.vcf"
-        output:
-            vcf = temp("vardict/{sample}_EB.vcf"),
-            txt = temp("vardict/{sample}_EB.txt")
-        log:
-            "logs/EBFilter/{sample}.log"
-        threads:
-            4
-        resources:
-            time=get_time_3_1,
-            mem=get_mem_30_10
-        benchmark:
-            "benchmarks/ebfilter/{sample}.tsv"
-        conda:
-            "../env/EBFilter-env.yaml"
-        params:
-            normals = config['edit']['normals']
-        shell:
-            r"""
-            EBFilter -f vcf -t {threads} {input.vcf} {input.sample} {params.normals} {output.vcf}
-            bcftools query -f '[%EB]\n' {output.vcf} > {output.txt} 2>/dev/null
-            """
-else:
-    rule fake_ebfilter:
-        input:
-            vcf = "vardict/{sample}.vcf"
-        output:
-            txt = temp("vardict/{sample}_EB.txt")
-        log:
-            "logs/EBFilter/{sample}.log"
-        threads:
-            1
-        resources:
-            time=get_time_1_1
-        benchmark:
-            "benchmarks/fake_ebfilter/{sample}.tsv"
-        run:
-           with open(input.vcf, "r") as input_file:
-              vcf_lines = sum(1 for line in input_file if not line.startswith("#"))
+# uncomment to add collums "EBScore" and "MultiAllelic", note that rule "add_ebfilter" and "umi-variantcalling/scripts/AddParameters.R" have to be adjusted too
+# if config["general"]["control"]:
+#     rule ebfilter:
+#         input:
+#             sample = lambda wildcards: input_bam[wildcards.sample],
+#             vcf = "vardict/{sample}.vcf"
+#         output:
+#             vcf = temp("vardict/{sample}_EB.vcf"),
+#             txt = temp("vardict/{sample}_EB.txt")
+#         log:
+#             "logs/EBFilter/{sample}.log"
+#         threads:
+#             4
+#         resources:
+#             time=get_time_3_1,
+#             mem=get_mem_30_10
+#         benchmark:
+#             "benchmarks/ebfilter/{sample}.tsv"
+#         conda:
+#             "../env/EBFilter-env.yaml"
+#         params:
+#             normals = config['edit']['normals']
+#         shell:
+#             r"""
+#             EBFilter -f vcf -t {threads} {input.vcf} {input.sample} {params.normals} {output.vcf}
+#             bcftools query -f '[%EB]\n' {output.vcf} > {output.txt} 2>/dev/null
+#             """
+# else:
+#     rule fake_ebfilter:
+#         input:
+#             vcf = "vardict/{sample}.vcf"
+#         output:
+#             txt = temp("vardict/{sample}_EB.txt")
+#         log:
+#             "logs/EBFilter/{sample}.log"
+#         threads:
+#             1
+#         resources:
+#             time=get_time_1_1
+#         benchmark:
+#             "benchmarks/fake_ebfilter/{sample}.tsv"
+#         run:
+#            with open(input.vcf, "r") as input_file:
+#               vcf_lines = sum(1 for line in input_file if not line.startswith("#"))
            
-           with open(output.txt, "w") as output_file:
-              output_file.write("\n".join(["NaN"] * vcf_lines))
+#            with open(output.txt, "w") as output_file:
+#               output_file.write("\n".join(["NaN"] * vcf_lines))
 
 rule add_ebfilter:
     input:
         anno = "table/{sample}.anno.csv",
-        ebfilter = "vardict/{sample}_EB.txt"
+        #ebfilter = "vardict/{sample}_EB.txt" # uncomment if using EBFilter
     output:
         temp("table/{sample}.edit.csv")
     conda:
